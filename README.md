@@ -21,10 +21,10 @@ Aucun fichier du dossier `resources` de Discord n'est touché.
 
 ## Prérequis
 
-- **Rust** pour compiler le launcher. Sous Windows : toolchain stable (MSVC).
-  Sous **Linux : nightly obligatoire** — `electron-hook` y utilise `retour`
-  (`static-detour`), qui dépend de features Rust nightly
-  (`rustup toolchain install nightly`).
+- **Rust via [rustup](https://rustup.rs)** (pas le `cargo` d'apt). Le dépôt épingle
+  `nightly-2025-03-01` dans `rust-toolchain.toml` : `retour`, tiré par `electron-hook`
+  sous Linux, ne compile pas sur les rustc récents (ABI stdcall/fastcall,
+  retour-rs#69). rustup installe cette toolchain tout seul, sur les deux plateformes.
 - Un **build local d'Equicord** : Node ≥ 22 et `pnpm`.
 
 ## Compiler le launcher

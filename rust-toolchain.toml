@@ -1,0 +1,6 @@
+# Épinglé sur la même nightly que Vencord-Launcher. Raison : retour 0.3.1 (tiré par
+# electron-hook sous Linux via la feature static-detour) ne compile plus sur les rustc
+# récents — ABI stdcall/fastcall rejetées sur x86_64 (retour-rs#69). nightly-2025-03-01
+# ≈ 1.88.0. rustup installe cette toolchain automatiquement, sur Windows et Linux.
+[toolchain]
+channel = "nightly-2025-03-01"

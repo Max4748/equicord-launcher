@@ -10,10 +10,9 @@ ARCH="$(dpkg --print-architecture)"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 
-# nightly requis : retour (static-detour), utilisé par electron-hook sous Linux,
-# dépend de features Rust nightly.
-echo ">> cargo +nightly build --release"
-( cd "$root" && cargo +nightly build --release )
+# Toolchain épinglée par rust-toolchain.toml (nightly datée, requise par retour).
+echo ">> cargo build --release"
+( cd "$root" && cargo build --release )
 
 rel="$root/target/release"
 so="$rel/libequicord_launcher.so"

@@ -22,7 +22,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # Installe la toolchain épinglée par rust-toolchain.toml.
+      - run: rustup show
       - name: Installer Inno Setup
         run: choco install innosetup -y --no-progress
       - name: Compiler l'installeur
@@ -37,9 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # nightly requis : sur Linux electron-hook utilise retour (static-detour),
-      # qui dépend de features Rust nightly. Windows passe par detours-sys (stable).
-      - uses: dtolnay/rust-toolchain@nightly
+      # Installe la toolchain épinglée par rust-toolchain.toml.
+      - run: rustup show
       - name: Compiler le .deb
         run: |
           chmod +x installer/linux/build-deb.sh
