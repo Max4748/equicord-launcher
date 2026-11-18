@@ -3,7 +3,7 @@
 ; Prérequis : les binaires doivent exister dans ..\..\target\release\ (cargo build --release).
 
 #define AppName "Equicord Launcher"
-#define AppVersion "0.2.0"
+#define AppVersion "0.2.1"
 #define RelDir "..\..\target\release"
 
 [Setup]
@@ -14,8 +14,8 @@ AppPublisher=equicord-launcher
 DefaultDirName={autopf}\Equicord Launcher
 DefaultGroupName=Equicord Launcher
 DisableProgramGroupPage=yes
+; Toujours par utilisateur : Discord et la config vivent dans le profil, pas besoin d'admin.
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=output
 OutputBaseFilename=equicord-launcher-setup
 Compression=lzma2
@@ -34,12 +34,12 @@ Source: "{#RelDir}\equicord_launcher.dll";  DestDir: "{app}"; Flags: ignoreversi
 Source: "..\..\README.md";                  DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\config.example.toml";        DestDir: "{app}"; Flags: ignoreversion
 
-; Une case par Discord installé (Stable/PTB/Canary). Si aucun n'est détecté, les
-; trois sont proposées (non cochées).
+; Une case par Discord installé (Stable/PTB/Canary), seule Stable cochée par défaut.
+; Si aucun n'est détecté, les trois sont proposées (non cochées).
 [Tasks]
 Name: "stable"; Description: "Discord Stable"; GroupDescription: "Discord à équiper d'Equicord :"; Check: ShowBranch('Discord')
-Name: "ptb";    Description: "Discord PTB";    GroupDescription: "Discord à équiper d'Equicord :"; Check: ShowBranch('DiscordPTB')
-Name: "canary"; Description: "Discord Canary"; GroupDescription: "Discord à équiper d'Equicord :"; Check: ShowBranch('DiscordCanary')
+Name: "ptb";    Description: "Discord PTB";    GroupDescription: "Discord à équiper d'Equicord :"; Check: ShowBranch('DiscordPTB');    Flags: unchecked
+Name: "canary"; Description: "Discord Canary"; GroupDescription: "Discord à équiper d'Equicord :"; Check: ShowBranch('DiscordCanary'); Flags: unchecked
 Name: "desktopicon"; Description: "Ajouter aussi les raccourcis sur le Bureau"; GroupDescription: "Raccourcis :"
 
 [Icons]
@@ -59,7 +59,8 @@ Type: files; Name: "{userappdata}\equicord-launcher\equicord.asar.tmp"
 
 [Code]
 var
-  EquicordPage: TInputDirWizardPage;
+  { Champ texte + bouton Parcourir : TInputDirWizardPage refuse un chemin vide. }
+  EquicordPage: TInputQueryWizardPage;
   TasksInitialized: Boolean;
 
 { Discord installé = %LOCALAPPDATA%\<Dir>\Update.exe présent (comme src/discord.rs). }
@@ -97,21 +98,54 @@ begin
   end;
 end;
 
-procedure InitializeWizard;
+procedure BrowseClick(Sender: TObject);
+var
+  Dir: string;
 begin
-  EquicordPage := CreateInputDirPage(wpSelectTasks,
+  Dir := EquicordPage.Values[0];
+  if BrowseForFolder('Dossier dist/desktop du build Equicord :', Dir, False) then
+    EquicordPage.Values[0] := Dir;
+end;
+
+procedure InitializeWizard;
+var
+  Edit: TPasswordEdit;
+  Btn: TNewButton;
+begin
+  EquicordPage := CreateInputQueryPage(wpSelectTasks,
     'Build Equicord (optionnel)', 'Utiliser un build local d''Equicord ?',
     'Laisse vide (recommandé) : la build officielle d''Equicord est téléchargée au premier' + #13#10 +
     'lancement et mise à jour automatiquement.' + #13#10 +
     'Sinon, indique le dossier dist/desktop de ton build (« pnpm build »).' + #13#10 +
-    'Un config.toml existant ne sera pas écrasé.',
-    False, '');
-  EquicordPage.Add('');
+    'Un config.toml existant ne sera pas écrasé.');
+  EquicordPage.Add('Dossier du build (vide = build officielle) :', False);
+
+  Edit := EquicordPage.Edits[0];
+  Btn := TNewButton.Create(EquicordPage);
+  Btn.Parent := EquicordPage.Surface;
+  Btn.Caption := SetupMessage(msgButtonWizardBrowse);
+  Btn.Width := ScaleX(75);
+  Btn.Height := WizardForm.NextButton.Height;
+  Edit.Width := Edit.Width - Btn.Width - ScaleX(10);
+  Btn.Left := Edit.Left + Edit.Width + ScaleX(10);
+  Btn.Top := Edit.Top + (Edit.Height - Btn.Height) div 2;
+  Btn.OnClick := @BrowseClick;
 end;
 
 function EquicordDist(): string;
 begin
   Result := Trim(EquicordPage.Values[0]);
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if (CurPageID = EquicordPage.ID) and (EquicordDist() <> '') and not DirExists(EquicordDist()) then
+  begin
+    MsgBox('Dossier introuvable : ' + EquicordDist() + #13#10 +
+      'Laisse le champ vide pour utiliser la build officielle.', mbError, MB_OK);
+    Result := False;
+  end;
 end;
 
 procedure WriteConfig();

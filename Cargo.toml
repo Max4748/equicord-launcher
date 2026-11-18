@@ -1,6 +1,6 @@
 [package]
 name = "equicord-launcher"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Launcher natif qui réinjecte Equicord dans Discord à chaque lancement, sans patcher les fichiers de Discord."
 license = "GPL-3.0"
@@ -52,4 +52,8 @@ features = [
     "minwinbase",
     "minwindef",
     "winnt",
+    # AttachConsole : les binaires n'ont pas de console propre (windows_subsystem).
+    "wincon",
+    # WaitForSingleObject : attente de l'ancien Discord lors d'un relaunch.
+    "synchapi",
 ]

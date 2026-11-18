@@ -1,8 +1,8 @@
+// Pas de fenêtre console au lancement sous Windows (voir launcher::main).
+#![windows_subsystem = "windows"]
+
 use equicord_launcher::discord::Branch;
 
 fn main() {
-    if let Err(e) = equicord_launcher::launcher::run(Branch::Stable) {
-        eprintln!("[equicord-launcher] Erreur : {e}");
-        std::process::exit(1);
-    }
+    equicord_launcher::launcher::main(Branch::Stable);
 }

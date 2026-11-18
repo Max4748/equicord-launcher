@@ -110,17 +110,18 @@ powershell -ExecutionPolicy Bypass -File installer\windows\build.ps1
 
 Produit `installer\windows\output\equicord-launcher-setup.exe`. Nécessite Inno Setup 6
 (`winget install -e --id JRSoftware.InnoSetup`). Le setup pose les trois exécutables + la
-DLL, propose une case par Discord installé (Stable, PTB, Canary ; toutes cochées) pour
+DLL pour l'utilisateur courant (sans droits admin), propose une case par Discord installé
+(Stable, PTB, Canary ; seule Stable cochée) pour
 créer les raccourcis menu Démarrer (+ Bureau en option, icône de la branche), et
-propose d'écrire `%APPDATA%\equicord-launcher\config.toml` (sans écraser un fichier existant).
-Désinstallation via « Applications » de Windows.
+propose un build local d'Equicord (champ vide = build officielle ; écrit alors
+`%APPDATA%\equicord-launcher\config.toml` sans écraser un fichier existant).
 
 ### Ubuntu / Debian (`.deb`)
 
 ```
 chmod +x installer/linux/build-deb.sh
 installer/linux/build-deb.sh
-sudo apt install ./target/equicord-launcher_0.2.0_amd64.deb
+sudo apt install ./target/equicord-launcher_0.2.1_amd64.deb
 ```
 
 Installe les binaires et la lib dans `/usr/lib/equicord-launcher/`, des symlinks dans
@@ -149,6 +150,29 @@ chmod +x installer/linux/install.sh installer/linux/uninstall.sh
 installer/linux/install.sh      # pose tout sous ~/.local, puis lance equicord-shortcuts
 installer/linux/uninstall.sh    # retire la version utilisateur
 ```
+
+## Désinstallation
+
+Le launcher ne modifie aucun fichier de Discord : une fois retiré, Discord se lance sans
+Equicord, sans rien à restaurer.
+
+| Installé via | Commande |
+| --- | --- |
+| Setup Windows | Paramètres > Applications > Equicord Launcher > Désinstaller (ou « Désinstaller Equicord Launcher » dans le menu Démarrer) |
+| `.deb` | `equicord-shortcuts --remove` puis `sudo apt remove equicord-launcher` |
+| `install.sh` | `installer/linux/uninstall.sh` |
+| Build du dépôt | supprimer le raccourci créé à la main, puis `target/` |
+
+Restent ensuite (à supprimer à la main si besoin) :
+
+| Contenu | Windows | Linux |
+| --- | --- | --- |
+| Config | `%APPDATA%\equicord-launcher\config.toml` | `~/.config/equicord-launcher/` |
+| Build Equicord téléchargée | retirée par le setup ; sinon `%APPDATA%\equicord-launcher\` | `~/.local/share/equicord-launcher/` (retirée par `uninstall.sh`) |
+| Asar généré par electron-hook | `%LOCALAPPDATA%\electron-hook\` | `~/.cache/electron-hook/` |
+
+Avec le `.deb`, les entrées `~/.local/share/applications/equicord-*.desktop` restent sur
+le disque si `--remove` n'a pas été lancé avant, mais `TryExec` les masque du menu.
 
 ## Plateformes
 

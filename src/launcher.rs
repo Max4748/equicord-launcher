@@ -3,7 +3,72 @@
 use crate::config::Config;
 use crate::discord::Branch;
 
-/// Point d'entrée des binaires : résout la config puis lance Discord.
+/// `main` des binaires. Sous Windows ils sont compilés sans console (pas de fenêtre cmd
+/// au lancement) : on se rattache à la console du parent si lancé depuis un terminal,
+/// sinon les erreurs s'affichent dans une boîte de dialogue.
+pub fn main(default_branch: Branch) {
+    #[cfg(windows)]
+    let has_console = attach_parent_console();
+    #[cfg(windows)]
+    wait_for_relaunching_discord();
+
+    if let Err(e) = run(default_branch) {
+        eprintln!("[equicord-launcher] Erreur : {e}");
+        #[cfg(windows)]
+        if !has_console {
+            error_box(&e);
+        }
+        std::process::exit(1);
+    }
+}
+
+#[cfg(windows)]
+fn attach_parent_console() -> bool {
+    use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
+    unsafe { AttachConsole(ATTACH_PARENT_PROCESS) != 0 }
+}
+
+/// Relancé par Discord (« Relaunch » d'Equicord, voir require.js) : attend que l'ancien
+/// Discord se ferme, sinon son verrou d'instance unique bloque le nouveau.
+#[cfg(windows)]
+fn wait_for_relaunching_discord() {
+    use winapi::um::handleapi::CloseHandle;
+    use winapi::um::processthreadsapi::OpenProcess;
+    use winapi::um::synchapi::WaitForSingleObject;
+    use winapi::um::winnt::SYNCHRONIZE;
+
+    let Some(pid) = std::env::var("EQUICORD_LAUNCHER_WAIT_PID")
+        .ok()
+        .and_then(|p| p.parse::<u32>().ok())
+    else {
+        return;
+    };
+    std::env::remove_var("EQUICORD_LAUNCHER_WAIT_PID");
+    unsafe {
+        let handle = OpenProcess(SYNCHRONIZE, 0, pid);
+        if !handle.is_null() {
+            WaitForSingleObject(handle, 15_000);
+            CloseHandle(handle);
+        }
+    }
+}
+
+#[cfg(windows)]
+fn error_box(message: &str) {
+    use std::os::windows::ffi::OsStrExt;
+    use winapi::um::winuser::{MessageBoxW, MB_ICONERROR, MB_OK};
+
+    let wide = |s: &str| -> Vec<u16> {
+        std::ffi::OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
+    };
+    let text = wide(message);
+    let caption = wide("Equicord Launcher");
+    unsafe {
+        MessageBoxW(std::ptr::null_mut(), text.as_ptr(), caption.as_ptr(), MB_OK | MB_ICONERROR);
+    }
+}
+
+/// Résout la config puis lance Discord.
 pub fn run(default_branch: Branch) -> Result<(), String> {
     let config = Config::resolve(default_branch)?;
     run_with(config)
