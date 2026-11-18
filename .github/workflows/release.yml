@@ -3,11 +3,22 @@ name: release
 # Compile le launcher sur Windows et Ubuntu, puis publie les installeurs
 # (.exe Inno Setup + .deb) dans une Release GitHub.
 # Déclenché par un tag vX.Y.Z, ou manuellement (Actions > release > Run workflow).
+# Un push sur main compile aussi (sans publier) : ça remplit le cache Cargo, que
+# GitHub ne partage pas entre tags mais rend lisible depuis main à tous les tags.
 
 on:
   push:
     tags:
       - "v*"
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "Cargo.*"
+      - "rust-toolchain.toml"
+      - "installer/**"
+      - "assets/**"
+      - ".github/workflows/**"
   workflow_dispatch:
     inputs:
       tag:
@@ -21,14 +32,15 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Installe la toolchain épinglée par rust-toolchain.toml.
       - run: rustup show
+      - uses: Swatinem/rust-cache@v2
       - name: Installer Inno Setup
         run: choco install innosetup -y --no-progress
       - name: Compiler l'installeur
         run: powershell -ExecutionPolicy Bypass -File installer/windows/build.ps1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-setup
           path: installer/windows/output/equicord-launcher-setup.exe
@@ -37,14 +49,15 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Installe la toolchain épinglée par rust-toolchain.toml.
       - run: rustup show
+      - uses: Swatinem/rust-cache@v2
       - name: Compiler le .deb
         run: |
           chmod +x installer/linux/build-deb.sh
           ./installer/linux/build-deb.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-deb
           path: target/*.deb
@@ -52,14 +65,15 @@ jobs:
 
   release:
     needs: [windows, linux]
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
       - name: Publier la Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           name: ${{ github.event.inputs.tag || github.ref_name }}
