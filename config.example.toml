@@ -1,0 +1,14 @@
+# Exemple de configuration. Copie-le vers :
+#   Windows : %APPDATA%\equicord-launcher\config.toml
+#   Linux   : ~/.config/equicord-launcher/config.toml
+# (ou passe --config <chemin>). Les arguments CLI sont prioritaires sur ce fichier.
+
+# Chemin vers ton build Equicord. Accepte la racine du repo, dist/, dist/desktop/,
+# ou directement .../dist/desktop/patcher.js.
+equicord_dist = "C:\\Users\\maxen\\Documents\\Development\\Equicord\\dist\\desktop"
+
+# Branche par défaut (sinon, chaque binaire impose la sienne).
+# branch = "stable"   # stable | ptb | canary
+
+# Arguments passés tels quels à Discord.
+# extra_args = ["--start-minimized"]

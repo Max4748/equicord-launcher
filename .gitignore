@@ -1,0 +1,12 @@
+# Artefacts de build Rust
+/target
+
+# Sortie de l'installeur Windows (généré par Inno Setup)
+installer/windows/output/
+
+# Données de session / outillage local
+.letta/
+
+# Divers OS
+Thumbs.db
+.DS_Store
