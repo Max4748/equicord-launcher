@@ -3,7 +3,7 @@
 # Prérequis : rust (cargo), dpkg-deb. À exécuter sur la machine Linux cible.
 set -euo pipefail
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 PKG="equicord-launcher"
 ARCH="$(dpkg --print-architecture)"
 

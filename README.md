@@ -120,7 +120,7 @@ Désinstallation via « Applications » de Windows.
 ```
 chmod +x installer/linux/build-deb.sh
 installer/linux/build-deb.sh
-sudo apt install ./target/equicord-launcher_0.1.0_amd64.deb
+sudo apt install ./target/equicord-launcher_0.2.0_amd64.deb
 ```
 
 Installe les binaires et la lib dans `/usr/lib/equicord-launcher/`, des symlinks dans
