@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 #[derive(Parser, Debug)]
 #[command(about = "Réinjecte Equicord dans Discord à chaque lancement, sans patcher Discord.")]
 struct Cli {
-    /// Chemin vers le build Equicord : racine du repo, `dist/`, `dist/desktop/`,
-    /// ou directement `.../dist/desktop/patcher.js`.
+    /// Build Equicord local (racine du repo, `dist/`, `dist/desktop/` ou `.../patcher.js`).
+    /// Sans ce chemin, la build officielle est téléchargée et tenue à jour.
     #[arg(long)]
     equicord: Option<PathBuf>,
 
@@ -56,7 +56,8 @@ struct FileConfig {
 /// Configuration résolue, prête à l'emploi.
 pub struct Config {
     pub branch: Branch,
-    pub equicord: PathBuf,
+    /// Build local ; `None` = build officielle téléchargée.
+    pub equicord: Option<PathBuf>,
     pub extra_args: Vec<String>,
 }
 
@@ -74,12 +75,13 @@ impl Config {
 
         let equicord = cli
             .equicord
-            .or_else(|| file.equicord_dist.as_ref().map(PathBuf::from))
-            .ok_or_else(|| {
-                "Aucun chemin Equicord fourni. Passe --equicord <.../dist/desktop> \
-                 ou renseigne 'equicord_dist' dans le fichier de config."
-                    .to_string()
-            })?;
+            .or_else(|| {
+                file.equicord_dist
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(PathBuf::from)
+            });
 
         let extra_args = if cli.discord_args.is_empty() {
             file.extra_args.unwrap_or_default()
@@ -94,27 +96,35 @@ impl Config {
         })
     }
 
-    /// Résout le chemin absolu du `patcher.js` d'Equicord à partir du chemin fourni.
-    pub fn resolve_patcher(&self) -> Result<String, String> {
-        let base = &self.equicord;
-        let candidates = [
-            base.clone(),
-            base.join("patcher.js"),
-            base.join("desktop").join("patcher.js"),
-            base.join("dist").join("desktop").join("patcher.js"),
-        ];
-        for c in candidates {
-            if c.is_file() && c.file_name().is_some_and(|n| n == "patcher.js") {
-                let abs = std::path::absolute(&c).map_err(|e| e.to_string())?;
-                return Ok(abs.to_string_lossy().into_owned());
-            }
+    /// Point d'entrée Equicord à charger : `patcher.js` du build local, sinon
+    /// l'asar officiel (téléchargé ou mis à jour si besoin).
+    pub fn resolve_entrypoint(&self) -> Result<String, String> {
+        match &self.equicord {
+            Some(base) => resolve_patcher(base),
+            None => crate::updater::ensure_latest(),
         }
-        Err(format!(
-            "patcher.js introuvable à partir de « {} ». Attendu dist/desktop/patcher.js \
-             (lance `pnpm build` dans ton clone d'Equicord).",
-            base.display()
-        ))
     }
+}
+
+/// Résout le chemin absolu du `patcher.js` d'un build local.
+fn resolve_patcher(base: &Path) -> Result<String, String> {
+    let candidates = [
+        base.to_path_buf(),
+        base.join("patcher.js"),
+        base.join("desktop").join("patcher.js"),
+        base.join("dist").join("desktop").join("patcher.js"),
+    ];
+    for c in candidates {
+        if c.is_file() && c.file_name().is_some_and(|n| n == "patcher.js") {
+            let abs = std::path::absolute(&c).map_err(|e| e.to_string())?;
+            return Ok(abs.to_string_lossy().into_owned());
+        }
+    }
+    Err(format!(
+        "patcher.js introuvable à partir de « {} ». Attendu dist/desktop/patcher.js \
+         (lance `pnpm build` dans ton clone d'Equicord).",
+        base.display()
+    ))
 }
 
 fn load_file_config(explicit: Option<&Path>) -> Result<FileConfig, String> {

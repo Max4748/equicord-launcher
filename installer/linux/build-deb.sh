@@ -23,9 +23,8 @@ trap 'rm -rf "$build"' EXIT
 
 libdir="$build/usr/lib/$PKG"
 bindir="$build/usr/bin"
-appsdir="$build/usr/share/applications"
 docdir="$build/usr/share/doc/$PKG"
-mkdir -p "$libdir" "$bindir" "$appsdir" "$docdir" "$build/DEBIAN"
+mkdir -p "$libdir" "$bindir" "$docdir" "$build/DEBIAN"
 
 # Les binaires et la .so vivent ensemble : le launcher cherche la lib à côté de lui,
 # et current_exe() résout le symlink de /usr/bin vers le vrai chemin dans /usr/lib.
@@ -38,24 +37,16 @@ for b in stable ptb canary; do
   ln -sf "../lib/$PKG/equicord-$b" "$bindir/equicord-$b"
 done
 
-for b in stable ptb canary; do
-  case "$b" in
-    stable) label="Equicord (Discord)";;
-    ptb)    label="Equicord (Discord PTB)";;
-    canary) label="Equicord (Discord Canary)";;
-  esac
-  cat > "$appsdir/equicord-$b.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=$label
-Comment=Lance Discord avec Equicord injecté
-Exec=equicord-$b
-Icon=discord
-Terminal=false
-Categories=Network;InstantMessaging;
-StartupWMClass=equicord-$b
-EOF
-done
+# Icône Equicord embarquée : "Icon=discord" n'existe que si le .deb officiel de
+# Discord est installé (absente avec Flatpak ou le tar.gz).
+icondir="$build/usr/share/icons/hicolor/256x256/apps"
+mkdir -p "$icondir"
+install -m 0644 "$root/assets/equicord.png" "$icondir/$PKG.png"
+
+# Pas d'entrée de menu système : chaque utilisateur choisit ses branches Discord
+# avec equicord-shortcuts (entrées dans ~/.local/share/applications).
+install -m 0755 "$here/equicord-shortcuts.sh" "$libdir/equicord-shortcuts"
+ln -sf "../lib/$PKG/equicord-shortcuts" "$bindir/equicord-shortcuts"
 
 install -m 0644 "$root/config.example.toml" "$docdir/"
 install -m 0644 "$root/README.md" "$docdir/"
@@ -70,16 +61,20 @@ Maintainer: equicord-launcher <noreply@localhost>
 Depends: libc6
 Description: Launcher natif qui réinjecte Equicord dans Discord à chaque lancement.
  Ne modifie jamais les fichiers de Discord ; l'injection survit aux mises à jour.
- Nécessite un build local d'Equicord, configuré dans
- ~/.config/equicord-launcher/config.toml (voir /usr/share/doc/$PKG/config.example.toml).
+ Télécharge la build officielle d'Equicord et la tient à jour ; un build local
+ peut être configuré (voir /usr/share/doc/$PKG/config.example.toml).
 EOF
 
 cat > "$build/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e
-echo "equicord-launcher : crée ~/.config/equicord-launcher/config.toml avec le chemin de"
-echo "ton build Equicord (dist/desktop), ou lance : equicord-stable --equicord <chemin>"
-echo "Modèle : /usr/share/doc/equicord-launcher/config.example.toml"
+# Installé via sudo : crée les raccourcis des Discord détectés pour cet utilisateur.
+if [ "$1" = "configure" ] && [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+  su - "$SUDO_USER" -c "/usr/bin/equicord-shortcuts --auto" || true
+fi
+echo "equicord-launcher : choisis les Discord à équiper avec : equicord-shortcuts"
+echo "Equicord est téléchargé au premier lancement et mis à jour automatiquement."
+echo "Build local (optionnel) : voir /usr/share/doc/equicord-launcher/config.example.toml"
 exit 0
 EOF
 chmod 0755 "$build/DEBIAN/postinst"

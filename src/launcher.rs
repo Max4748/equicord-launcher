@@ -11,7 +11,7 @@ pub fn run(default_branch: Branch) -> Result<(), String> {
 
 /// Lance Discord avec une configuration déjà résolue.
 pub fn run_with(config: Config) -> Result<(), String> {
-    let patcher = config.resolve_patcher()?;
+    let patcher = config.resolve_entrypoint()?;
     let library = resolve_library_path()?;
 
     // Par prudence : empêche un éventuel auto-patch côté mod (hérité de Vencord).

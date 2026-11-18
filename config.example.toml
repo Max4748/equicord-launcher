@@ -3,9 +3,10 @@
 #   Linux   : ~/.config/equicord-launcher/config.toml
 # (ou passe --config <chemin>). Les arguments CLI sont prioritaires sur ce fichier.
 
-# Chemin vers ton build Equicord. Accepte la racine du repo, dist/, dist/desktop/,
-# ou directement .../dist/desktop/patcher.js.
-equicord_dist = "C:\\Users\\maxen\\Documents\\Development\\Equicord\\dist\\desktop"
+# Build local d'Equicord (optionnel). Sans cette ligne, la build officielle est
+# téléchargée au lancement et mise à jour automatiquement.
+# Accepte la racine du repo, dist/, dist/desktop/ ou .../dist/desktop/patcher.js.
+# equicord_dist = "C:\\chemin\\vers\\Equicord\\dist\\desktop"
 
 # Branche par défaut (sinon, chaque binaire impose la sienne).
 # branch = "stable"   # stable | ptb | canary

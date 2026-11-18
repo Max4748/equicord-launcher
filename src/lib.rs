@@ -13,3 +13,4 @@ pub use electron_hook::*;
 pub mod config;
 pub mod discord;
 pub mod launcher;
+pub mod updater;

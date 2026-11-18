@@ -34,28 +34,76 @@ Source: "{#RelDir}\equicord_launcher.dll";  DestDir: "{app}"; Flags: ignoreversi
 Source: "..\..\README.md";                  DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\config.example.toml";        DestDir: "{app}"; Flags: ignoreversion
 
+; Une case par Discord installé (Stable/PTB/Canary). Si aucun n'est détecté, les
+; trois sont proposées (non cochées).
 [Tasks]
-Name: "desktopicon"; Description: "Créer un raccourci sur le Bureau (Discord Stable)"; GroupDescription: "Raccourcis :"
-Name: "ptb";    Description: "Raccourci menu Démarrer pour Discord PTB";    GroupDescription: "Raccourcis :"; Flags: unchecked
-Name: "canary"; Description: "Raccourci menu Démarrer pour Discord Canary"; GroupDescription: "Raccourcis :"; Flags: unchecked
+Name: "stable"; Description: "Discord Stable"; GroupDescription: "Discord à équiper d'Equicord :"; Check: ShowBranch('Discord')
+Name: "ptb";    Description: "Discord PTB";    GroupDescription: "Discord à équiper d'Equicord :"; Check: ShowBranch('DiscordPTB')
+Name: "canary"; Description: "Discord Canary"; GroupDescription: "Discord à équiper d'Equicord :"; Check: ShowBranch('DiscordCanary')
+Name: "desktopicon"; Description: "Ajouter aussi les raccourcis sur le Bureau"; GroupDescription: "Raccourcis :"
 
 [Icons]
-Name: "{group}\Equicord (Discord)";        Filename: "{app}\equicord-stable.exe"; WorkingDir: "{app}"; IconFilename: "{localappdata}\Discord\app.ico"
-Name: "{group}\Equicord (Discord PTB)";    Filename: "{app}\equicord-ptb.exe";    WorkingDir: "{app}"; Tasks: ptb
-Name: "{group}\Equicord (Discord Canary)"; Filename: "{app}\equicord-canary.exe"; WorkingDir: "{app}"; Tasks: canary
+Name: "{group}\Equicord (Discord)";        Filename: "{app}\equicord-stable.exe"; WorkingDir: "{app}"; IconFilename: "{code:BranchIcon|Discord}";       Tasks: stable
+Name: "{group}\Equicord (Discord PTB)";    Filename: "{app}\equicord-ptb.exe";    WorkingDir: "{app}"; IconFilename: "{code:BranchIcon|DiscordPTB}";    Tasks: ptb
+Name: "{group}\Equicord (Discord Canary)"; Filename: "{app}\equicord-canary.exe"; WorkingDir: "{app}"; IconFilename: "{code:BranchIcon|DiscordCanary}"; Tasks: canary
 Name: "{group}\Désinstaller Equicord Launcher"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Equicord (Discord)";  Filename: "{app}\equicord-stable.exe"; WorkingDir: "{app}"; IconFilename: "{localappdata}\Discord\app.ico"; Tasks: desktopicon
+Name: "{autodesktop}\Equicord (Discord)";        Filename: "{app}\equicord-stable.exe"; WorkingDir: "{app}"; IconFilename: "{code:BranchIcon|Discord}";       Tasks: stable and desktopicon
+Name: "{autodesktop}\Equicord (Discord PTB)";    Filename: "{app}\equicord-ptb.exe";    WorkingDir: "{app}"; IconFilename: "{code:BranchIcon|DiscordPTB}";    Tasks: ptb and desktopicon
+Name: "{autodesktop}\Equicord (Discord Canary)"; Filename: "{app}\equicord-canary.exe"; WorkingDir: "{app}"; IconFilename: "{code:BranchIcon|DiscordCanary}"; Tasks: canary and desktopicon
+
+; Build officielle téléchargée par le launcher (la config utilisateur est conservée).
+[UninstallDelete]
+Type: files; Name: "{userappdata}\equicord-launcher\equicord.asar"
+Type: files; Name: "{userappdata}\equicord-launcher\equicord.asar.version"
+Type: files; Name: "{userappdata}\equicord-launcher\equicord.asar.tmp"
 
 [Code]
 var
   EquicordPage: TInputDirWizardPage;
+  TasksInitialized: Boolean;
+
+{ Discord installé = %LOCALAPPDATA%\<Dir>\Update.exe présent (comme src/discord.rs). }
+function BranchInstalled(Dir: string): Boolean;
+begin
+  Result := FileExists(ExpandConstant('{localappdata}\') + Dir + '\Update.exe');
+end;
+
+function AnyBranchInstalled(): Boolean;
+begin
+  Result := BranchInstalled('Discord') or BranchInstalled('DiscordPTB') or BranchInstalled('DiscordCanary');
+end;
+
+function ShowBranch(Dir: string): Boolean;
+begin
+  Result := BranchInstalled(Dir) or not AnyBranchInstalled();
+end;
+
+{ Icône de la branche si Discord est là ; sinon '' = icône de l'exécutable. }
+function BranchIcon(Dir: string): string;
+begin
+  Result := ExpandConstant('{localappdata}\') + Dir + '\app.ico';
+  if not FileExists(Result) then
+    Result := '';
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  { Aucun Discord détecté : les trois branches sont proposées, mais décochées. }
+  if (CurPageID = wpSelectTasks) and not TasksInitialized then
+  begin
+    TasksInitialized := True;
+    if not AnyBranchInstalled() then
+      WizardSelectTasks('!stable,!ptb,!canary');
+  end;
+end;
 
 procedure InitializeWizard;
 begin
   EquicordPage := CreateInputDirPage(wpSelectTasks,
-    'Build Equicord', 'Où se trouve ton build local d''Equicord ?',
-    'Indique le dossier dist/desktop produit par « pnpm build » (ou la racine du repo Equicord).' + #13#10 +
-    'Laisse vide pour configurer plus tard via --equicord ou le fichier config.toml.' + #13#10 +
+    'Build Equicord (optionnel)', 'Utiliser un build local d''Equicord ?',
+    'Laisse vide (recommandé) : la build officielle d''Equicord est téléchargée au premier' + #13#10 +
+    'lancement et mise à jour automatiquement.' + #13#10 +
+    'Sinon, indique le dossier dist/desktop de ton build (« pnpm build »).' + #13#10 +
     'Un config.toml existant ne sera pas écrasé.',
     False, '');
   EquicordPage.Add('');

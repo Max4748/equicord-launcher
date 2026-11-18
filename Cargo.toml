@@ -34,6 +34,8 @@ clap = { version = "4.5.27", features = ["derive"] }
 dirs = "6.0.0"
 serde = { version = "1.0.217", features = ["derive"] }
 toml = "0.8.19"
+# Téléchargement de la build officielle d'Equicord (TLS rustls par défaut).
+ureq = { version = "3", features = ["json"] }
 
 # electron-hook 0.2.1 utilise des modules winapi sans déclarer leurs features.
 # On les active ici : le resolver de cargo unifie les features winapi avec celles

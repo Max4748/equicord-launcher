@@ -17,8 +17,7 @@ so="$rel/libequicord_launcher.so"
 
 libdir="$HOME/.local/lib/$PKG"
 bindir="$HOME/.local/bin"
-appsdir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-mkdir -p "$libdir" "$bindir" "$appsdir"
+mkdir -p "$libdir" "$bindir"
 
 install -m 0755 "$rel/equicord-stable" "$libdir/"
 install -m 0755 "$rel/equicord-ptb"    "$libdir/"
@@ -29,29 +28,25 @@ for b in stable ptb canary; do
   ln -sf "$libdir/equicord-$b" "$bindir/equicord-$b"
 done
 
-for b in stable ptb canary; do
-  case "$b" in
-    stable) label="Equicord (Discord)";;
-    ptb)    label="Equicord (Discord PTB)";;
-    canary) label="Equicord (Discord Canary)";;
-  esac
-  cat > "$appsdir/equicord-$b.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=$label
-Comment=Lance Discord avec Equicord injecté
-Exec=$bindir/equicord-$b
-Icon=discord
-Terminal=false
-Categories=Network;InstantMessaging;
-StartupWMClass=equicord-$b
-EOF
-done
+icondir="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/256x256/apps"
+mkdir -p "$icondir"
+install -m 0644 "$root/assets/equicord.png" "$icondir/$PKG.png"
+
+install -m 0755 "$here/equicord-shortcuts.sh" "$libdir/equicord-shortcuts"
+ln -sf "$libdir/equicord-shortcuts" "$bindir/equicord-shortcuts"
+
+# Choix des Discord à équiper. Arguments transmis tels quels
+# (ex. install.sh stable canary, ou install.sh --auto) ; sans argument, demande.
+if [ "$#" -eq 0 ] && [ ! -t 0 ]; then
+  "$libdir/equicord-shortcuts" --auto
+else
+  "$libdir/equicord-shortcuts" "$@"
+fi
 
 echo ">> Installé dans $libdir (binaires + lib) et $bindir (raccourcis PATH)."
 case ":$PATH:" in
   *":$bindir:"*) : ;;
   *) echo ">> Ajoute $bindir à ton PATH (ex. dans ~/.profile) pour lancer par le nom.";;
 esac
-echo ">> Configure ensuite ~/.config/$PKG/config.toml (voir $root/config.example.toml)"
-echo "   ou lance : equicord-stable --equicord <chemin-vers-Equicord/dist/desktop>"
+echo ">> Equicord est téléchargé au premier lancement et mis à jour automatiquement."
+echo "   Build local (optionnel) : voir $root/config.example.toml"
