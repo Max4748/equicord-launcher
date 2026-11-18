@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Launcher natif qui réinjecte Equicord dans Discord à chaque lancement, sans patcher les fichiers de Discord."
 license = "GPL-3.0"
+# = rustc de nightly-2025-03-01 (rust-toolchain.toml). Permet à cargo de choisir des
+# dépendances compatibles (resolver MSRV-aware).
+rust-version = "1.87"
 autobins = false
 
 [lib]

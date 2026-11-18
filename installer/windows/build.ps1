@@ -7,6 +7,7 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Write-Host '>> cargo build --release'
 Push-Location $root
 try { cargo build --release } finally { Pop-Location }
+if ($LASTEXITCODE -ne 0) { throw "cargo build a échoué (code $LASTEXITCODE)." }
 
 # Inno Setup s'installe soit par machine (Program Files), soit par utilisateur (winget).
 $candidates = @(
