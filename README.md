@@ -21,7 +21,10 @@ Aucun fichier du dossier `resources` de Discord n'est touché.
 
 ## Prérequis
 
-- **Rust** (toolchain MSVC sous Windows) pour compiler le launcher.
+- **Rust** pour compiler le launcher. Sous Windows : toolchain stable (MSVC).
+  Sous **Linux : nightly obligatoire** — `electron-hook` y utilise `retour`
+  (`static-detour`), qui dépend de features Rust nightly
+  (`rustup toolchain install nightly`).
 - Un **build local d'Equicord** : Node ≥ 22 et `pnpm`.
 
 ## Compiler le launcher

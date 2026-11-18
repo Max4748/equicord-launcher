@@ -37,7 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # nightly requis : sur Linux electron-hook utilise retour (static-detour),
+      # qui dépend de features Rust nightly. Windows passe par detours-sys (stable).
+      - uses: dtolnay/rust-toolchain@nightly
       - name: Compiler le .deb
         run: |
           chmod +x installer/linux/build-deb.sh

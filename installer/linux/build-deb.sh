@@ -10,8 +10,10 @@ ARCH="$(dpkg --print-architecture)"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 
-echo ">> cargo build --release"
-( cd "$root" && cargo build --release )
+# nightly requis : retour (static-detour), utilisé par electron-hook sous Linux,
+# dépend de features Rust nightly.
+echo ">> cargo +nightly build --release"
+( cd "$root" && cargo +nightly build --release )
 
 rel="$root/target/release"
 so="$rel/libequicord_launcher.so"
