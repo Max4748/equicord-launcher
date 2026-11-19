@@ -8,8 +8,8 @@
 # Accepte la racine du repo, dist/, dist/desktop/ ou .../dist/desktop/patcher.js.
 # equicord_dist = "C:\\chemin\\vers\\Equicord\\dist\\desktop"
 
-# Branche par défaut (sinon, chaque binaire impose la sienne).
-# branch = "stable"   # stable | ptb | canary
+# La branche Discord n'est pas réglable ici : chaque binaire lance la sienne
+# (equicord-stable, equicord-ptb, equicord-canary), ou celle passée avec --branch.
 
 # Arguments passés tels quels à Discord.
 # extra_args = ["--start-minimized"]

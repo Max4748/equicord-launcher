@@ -3,7 +3,7 @@
 ; Prérequis : les binaires doivent exister dans ..\..\target\release\ (cargo build --release).
 
 #define AppName "Equicord Launcher"
-#define AppVersion "0.2.2"
+#define AppVersion "0.2.3"
 #define RelDir "..\..\target\release"
 
 [Setup]
@@ -179,8 +179,7 @@ begin
   StringChangeEx(Escaped, '\', '\\', True);  { échappement TOML }
   Content :=
     '# Généré par l''installeur Equicord Launcher.' + #13#10 +
-    'equicord_dist = "' + Escaped + '"' + #13#10 +
-    'branch = "stable"' + #13#10;
+    'equicord_dist = "' + Escaped + '"' + #13#10;
   SaveStringToFile(Path, Content, False);
 end;
 

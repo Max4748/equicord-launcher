@@ -95,6 +95,10 @@ Cherché par défaut dans :
 
 Les options CLI sont prioritaires. Voir `config.example.toml`.
 
+Le fichier est commun aux trois binaires, donc il ne fixe pas la branche : chaque binaire
+lance la sienne. Une clé `branch` laissée par une version ≤ 0.2.2 est ignorée (elle
+faisait lancer la même branche à tous les raccourcis).
+
 ## Installeurs
 
 Scripts dans `installer/`. Ils compilent d'abord le launcher (`cargo build --release`),
@@ -122,7 +126,7 @@ propose un build local d'Equicord (champ vide = build officielle ; écrit alors
 ```
 chmod +x installer/linux/build-deb.sh
 installer/linux/build-deb.sh
-sudo apt install ./target/equicord-launcher_0.2.2_amd64.deb
+sudo apt install ./target/equicord-launcher_0.2.3_amd64.deb
 ```
 
 Installe les binaires et la lib dans `/usr/lib/equicord-launcher/`, des symlinks dans

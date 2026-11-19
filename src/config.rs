@@ -43,12 +43,13 @@ impl From<BranchArg> for Branch {
     }
 }
 
+/// Pas de `branch` ici : le fichier est partagé par les trois binaires, une branche
+/// fixée dans le fichier faisait lancer la même à tous les raccourcis. Une clé `branch`
+/// laissée par une version ≤ 0.2.2 est ignorée (serde ignore les clés inconnues).
 #[derive(Deserialize, Default)]
 struct FileConfig {
     /// Chemin vers le build Equicord.
     equicord_dist: Option<String>,
-    /// Branche par défaut (`stable` | `ptb` | `canary`).
-    branch: Option<String>,
     /// Arguments passés à Discord.
     extra_args: Option<Vec<String>>,
 }
@@ -67,11 +68,8 @@ impl Config {
         let cli = Cli::parse();
         let file = load_file_config(cli.config.as_deref())?;
 
-        let branch = cli
-            .branch
-            .map(Branch::from)
-            .or_else(|| file.branch.as_deref().and_then(parse_branch))
-            .unwrap_or(default_branch);
+        // La branche est celle du binaire lancé ; seul --branch la remplace.
+        let branch = cli.branch.map(Branch::from).unwrap_or(default_branch);
 
         let equicord = cli
             .equicord
@@ -148,11 +146,15 @@ fn load_file_config(explicit: Option<&Path>) -> Result<FileConfig, String> {
     toml::from_str(&text).map_err(|e| format!("Parsing de {} : {e}", path.display()))
 }
 
-fn parse_branch(s: &str) -> Option<Branch> {
-    match s.to_ascii_lowercase().as_str() {
-        "stable" => Some(Branch::Stable),
-        "ptb" => Some(Branch::Ptb),
-        "canary" => Some(Branch::Canary),
-        _ => None,
+#[cfg(test)]
+mod tests {
+    use super::FileConfig;
+
+    /// Un config.toml d'une ancienne version (avec `branch`) doit toujours se lire.
+    #[test]
+    fn ancienne_cle_branch_ignoree() {
+        let file: FileConfig =
+            toml::from_str("equicord_dist = \"x\"\nbranch = \"stable\"\n").unwrap();
+        assert_eq!(file.equicord_dist.as_deref(), Some("x"));
     }
 }
