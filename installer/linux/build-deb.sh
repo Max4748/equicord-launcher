@@ -3,7 +3,7 @@
 # Prérequis : rust (cargo), dpkg-deb. À exécuter sur la machine Linux cible.
 set -euo pipefail
 
-VERSION="0.2.1"
+VERSION="0.2.2"
 PKG="equicord-launcher"
 ARCH="$(dpkg --print-architecture)"
 
@@ -68,9 +68,11 @@ EOF
 cat > "$build/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e
-# Installé via sudo : crée les raccourcis des Discord détectés pour cet utilisateur.
+# Installé via sudo : équipe les entrées de menu des Discord détectés pour cet
+# utilisateur. Mise à jour ($2 = version précédente) : garde son choix de branches.
 if [ "$1" = "configure" ] && [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
-  su - "$SUDO_USER" -c "/usr/bin/equicord-shortcuts --auto" || true
+  if [ -n "${2:-}" ]; then mode="--refresh"; else mode="--auto"; fi
+  su - "$SUDO_USER" -c "/usr/bin/equicord-shortcuts $mode" || true
 fi
 echo "equicord-launcher : choisis les Discord à équiper avec : equicord-shortcuts"
 echo "Equicord est téléchargé au premier lancement et mis à jour automatiquement."
@@ -78,6 +80,19 @@ echo "Build local (optionnel) : voir /usr/share/doc/equicord-launcher/config.exa
 exit 0
 EOF
 chmod 0755 "$build/DEBIAN/postinst"
+
+cat > "$build/DEBIAN/prerm" <<'EOF'
+#!/bin/sh
+set -e
+# Les entrées Equicord masquent celles de Discord : on les retire (et restaure les
+# originales) avant que le script disparaisse, sinon Discord n'aurait plus d'entrée.
+# Seul l'utilisateur qui lance sudo est traité ; les autres : equicord-shortcuts --remove.
+if [ "$1" = "remove" ] && [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+  su - "$SUDO_USER" -c "/usr/bin/equicord-shortcuts --remove" || true
+fi
+exit 0
+EOF
+chmod 0755 "$build/DEBIAN/prerm"
 
 out="$root/target/${PKG}_${VERSION}_${ARCH}.deb"
 dpkg-deb --root-owner-group --build "$build" "$out"

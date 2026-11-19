@@ -7,6 +7,10 @@ libdir="$HOME/.local/lib/$PKG"
 bindir="$HOME/.local/bin"
 appsdir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
+# Les entrées Equicord masquent celles de Discord : on les retire (et restaure les
+# originales) tant que le script est encore là.
+[ -x "$libdir/equicord-shortcuts" ] && "$libdir/equicord-shortcuts" --remove || true
+
 for b in stable ptb canary; do
   rm -f "$bindir/equicord-$b" "$appsdir/equicord-$b.desktop"
 done

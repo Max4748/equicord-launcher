@@ -122,7 +122,7 @@ propose un build local d'Equicord (champ vide = build officielle ; écrit alors
 ```
 chmod +x installer/linux/build-deb.sh
 installer/linux/build-deb.sh
-sudo apt install ./target/equicord-launcher_0.2.1_amd64.deb
+sudo apt install ./target/equicord-launcher_0.2.2_amd64.deb
 ```
 
 Installe les binaires et la lib dans `/usr/lib/equicord-launcher/`, des symlinks dans
@@ -132,23 +132,39 @@ Discord détectés pour ton utilisateur. Configure ensuite
 
 ### Choisir les Discord équipés (Linux)
 
-`equicord-shortcuts` crée les entrées de menu dans `~/.local/share/applications` et retire
-celles des branches non choisies. Détection : `~/.local/share/<Discord>`, PATH, Flatpak.
+`equicord-shortcuts` remplace, pour l'utilisateur courant, l'entrée de menu de chaque
+branche choisie par une entrée qui lance Equicord. Détection : `~/.local/share/<Discord>`,
+PATH, Flatpak.
 
 | Commande | Effet |
 | --- | --- |
 | `equicord-shortcuts` | Demande pour chaque branche (défaut : oui si détectée) |
 | `equicord-shortcuts stable canary` | Branches explicites |
 | `equicord-shortcuts --auto` | Branches détectées, sans question |
-| `equicord-shortcuts --remove` | Retire toutes les entrées |
-| `--icon discord\|equicord` | Logo des raccourcis, combinable avec les commandes ci-dessus (défaut : `discord`, demandé en mode interactif) |
+| `equicord-shortcuts --refresh` | Réécrit les branches déjà équipées en gardant leur icône (lancé par le `.deb` à chaque mise à jour) |
+| `equicord-shortcuts --remove` | Retire tout et restaure les entrées d'origine |
+| `--icon discord\|equicord` | Logo des entrées, combinable avec les commandes ci-dessus (défaut : `discord`, demandé en mode interactif) |
 
 Avec `discord`, l'icône est cherchée dans le même ordre que Discord lui-même :
 `~/.local/share/<Discord>/discord.png` (tar.gz), `discord*.png` du paquet système, puis
 `com.discordapp.<Discord>` du Flatpak. Si rien n'est trouvé, le logo Equicord est utilisé.
-Relancer `equicord-shortcuts` sans `--icon` remet le logo Discord.
+Relancer `equicord-shortcuts` sans `--icon` remet le logo Discord (sauf `--refresh`).
 
-Les entrées ont `TryExec` : elles disparaissent du menu si le launcher est désinstallé.
+Pourquoi remplacer l'entrée de Discord plutôt qu'en ajouter une : Discord impose la classe
+de sa fenêtre (`discord`, `discord-ptb`, `discord-canary`). KDE et GNOME rattachent la
+fenêtre au `.desktop` de ce nom ; une entrée séparée donne deux icônes dans la barre des
+tâches (KDE) ou l'icône par défaut (GNOME).
+
+| Branche | Entrée écrite dans `~/.local/share/applications` |
+| --- | --- |
+| Stable | `discord.desktop` (gère aussi les liens `discord://`) |
+| PTB | `discord-ptb.desktop` |
+| Canary | `discord-canary.desktop` |
+
+Ces fichiers masquent ceux du système (`/usr/share/applications`) sans les modifier. Un
+fichier du même nom déjà présent dans ton dossier est renommé en `*.desktop.equicord-bak`
+et restauré par `--remove`. Les entrées `equicord-*.desktop` des versions ≤ 0.2.1 sont
+supprimées au passage.
 
 ### Linux sans root (`~/.local`)
 
@@ -167,7 +183,7 @@ Equicord, sans rien à restaurer.
 | Installé via | Commande |
 | --- | --- |
 | Setup Windows | Paramètres > Applications > Equicord Launcher > Désinstaller (ou « Désinstaller Equicord Launcher » dans le menu Démarrer) |
-| `.deb` | `equicord-shortcuts --remove` puis `sudo apt remove equicord-launcher` |
+| `.deb` | `sudo apt remove equicord-launcher` (restaure les entrées Discord de l'utilisateur qui lance `sudo`) |
 | `install.sh` | `installer/linux/uninstall.sh` |
 | Build du dépôt | supprimer le raccourci créé à la main, puis `target/` |
 
@@ -179,8 +195,11 @@ Restent ensuite (à supprimer à la main si besoin) :
 | Build Equicord téléchargée | retirée par le setup ; sinon `%APPDATA%\equicord-launcher\` | `~/.local/share/equicord-launcher/` (retirée par `uninstall.sh`) |
 | Asar généré par electron-hook | `%LOCALAPPDATA%\electron-hook\` | `~/.cache/electron-hook/` |
 
-Avec le `.deb`, les entrées `~/.local/share/applications/equicord-*.desktop` restent sur
-le disque si `--remove` n'a pas été lancé avant, mais `TryExec` les masque du menu.
+Sur une machine à plusieurs comptes, chaque autre utilisateur équipé lance
+`equicord-shortcuts --remove` avant la désinstallation du `.deb`. Sinon son entrée Discord
+reste masquée par une entrée Equicord qui ne se lance plus. Rattrapage après coup :
+`rm ~/.local/share/applications/discord*.desktop`, puis renommer les `*.equicord-bak`
+éventuels.
 
 ## Plateformes
 
