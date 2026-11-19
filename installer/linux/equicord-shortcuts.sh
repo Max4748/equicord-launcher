@@ -7,6 +7,8 @@
 #   equicord-shortcuts stable canary    # branches explicites
 #   equicord-shortcuts --auto           # branches détectées, sans question
 #   equicord-shortcuts --remove         # retire toutes les entrées
+#   --icon discord|equicord             # logo des raccourcis (défaut : discord ;
+#                                       # demandé en mode interactif)
 set -euo pipefail
 
 PKG="equicord-launcher"
@@ -34,6 +36,42 @@ detected() {
 
 valid_branch() { case "$1" in stable|ptb|canary) return 0;; *) return 1;; esac; }
 
+# Icône Discord de la branche, dans l'ordre de find_target (src/discord.rs) : tar.gz,
+# paquet système, Flatpak. Rien trouvé : logo Equicord, plutôt qu'une icône vide.
+discord_icon() {
+  local d bin id f
+  d="$(dir_name "$1")"; bin="$(linux_bin "$1")"; id="com.discordapp.$d"
+  for f in "$HOME/.local/share/$d/discord.png" "$HOME/.local/share/$d/$bin.png"; do
+    [ -f "$f" ] && { echo "$f"; return; }
+  done
+  for f in /usr/share/pixmaps/"$bin".png /usr/share/icons/hicolor/*/apps/"$bin".png; do
+    [ -f "$f" ] && { echo "$bin"; return; }
+  done
+  for f in "$HOME"/.local/share/flatpak/exports/share/icons/hicolor/*/apps/"$id".* \
+           /var/lib/flatpak/exports/share/icons/hicolor/*/apps/"$id".*; do
+    [ -f "$f" ] && { echo "$id"; return; }
+  done
+  echo "$PKG"
+}
+
+# --icon peut se placer n'importe où ; le reste des arguments garde son sens.
+icon=""
+args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --icon)
+      [ $# -ge 2 ] || { echo "--icon attend « discord » ou « equicord »" >&2; exit 1; }
+      icon="$2"; shift 2;;
+    --icon=*) icon="${1#--icon=}"; shift;;
+    *)        args+=("$1"); shift;;
+  esac
+done
+set -- "${args[@]+"${args[@]}"}"
+case "$icon" in
+  ""|discord|equicord) ;;
+  *) echo "--icon attend « discord » ou « equicord » (reçu : « $icon »)" >&2; exit 1;;
+esac
+
 selected=""
 case "${1:-}" in
   --remove)
@@ -52,9 +90,13 @@ case "${1:-}" in
       ans="${ans:-$def}"
       case "$ans" in [oOyY]*) selected="$selected $b";; esac
     done
+    if [ -z "$icon" ] && [ -n "${selected// /}" ]; then
+      read -r -p "Icône des raccourcis : logo Discord ou Equicord ? [D/e] " ans
+      case "${ans:-d}" in [eE]*) icon="equicord";; *) icon="discord";; esac
+    fi
     ;;
   -h|--help)
-    sed -n '2,10p' "$self" | sed 's/^# \{0,1\}//'
+    sed -n '2,11p' "$self" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
   *)
@@ -65,12 +107,15 @@ case "${1:-}" in
     ;;
 esac
 
+icon="${icon:-discord}"
+
 mkdir -p "$appsdir"
 for b in $BRANCHES; do
   file="$appsdir/equicord-$b.desktop"
   case " $selected " in
     *" $b "*)
       exe="$libdir/equicord-$b"
+      if [ "$icon" = "discord" ]; then icon_name="$(discord_icon "$b")"; else icon_name="$PKG"; fi
       # TryExec : l'entrée disparaît du menu si le launcher est désinstallé.
       cat > "$file" <<EOF
 [Desktop Entry]
@@ -79,12 +124,12 @@ Name=$(label "$b")
 Comment=Lance Discord avec Equicord injecté
 Exec=$exe
 TryExec=$exe
-Icon=$PKG
+Icon=$icon_name
 Terminal=false
 Categories=Network;InstantMessaging;
 StartupWMClass=equicord-$b
 EOF
-      echo ">> Raccourci : $(label "$b")"
+      echo ">> Raccourci : $(label "$b") (icône : $icon_name)"
       ;;
     *)
       rm -f "$file"

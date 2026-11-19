@@ -33,6 +33,7 @@ Source: "{#RelDir}\equicord-canary.exe";    DestDir: "{app}"; Flags: ignoreversi
 Source: "{#RelDir}\equicord_launcher.dll";  DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\README.md";                  DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\config.example.toml";        DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\assets\equicord.ico";         DestDir: "{app}"; Flags: ignoreversion
 
 ; Une case par Discord installé (Stable/PTB/Canary), seule Stable cochée par défaut.
 ; Si aucun n'est détecté, les trois sont proposées (non cochées).
@@ -61,6 +62,7 @@ Type: files; Name: "{userappdata}\equicord-launcher\equicord.asar.tmp"
 var
   { Champ texte + bouton Parcourir : TInputDirWizardPage refuse un chemin vide. }
   EquicordPage: TInputQueryWizardPage;
+  IconPage: TInputOptionWizardPage;
   TasksInitialized: Boolean;
 
 { Discord installé = %LOCALAPPDATA%\<Dir>\Update.exe présent (comme src/discord.rs). }
@@ -79,9 +81,15 @@ begin
   Result := BranchInstalled(Dir) or not AnyBranchInstalled();
 end;
 
-{ Icône de la branche si Discord est là ; sinon '' = icône de l'exécutable. }
+{ Logo Equicord si choisi ; sinon icône de la branche si Discord est là,
+  et '' (icône de l'exécutable) à défaut. }
 function BranchIcon(Dir: string): string;
 begin
+  if IconPage.SelectedValueIndex = 1 then
+  begin
+    Result := ExpandConstant('{app}\equicord.ico');
+    exit;
+  end;
   Result := ExpandConstant('{localappdata}\') + Dir + '\app.ico';
   if not FileExists(Result) then
     Result := '';
@@ -112,7 +120,15 @@ var
   Edit: TPasswordEdit;
   Btn: TNewButton;
 begin
-  EquicordPage := CreateInputQueryPage(wpSelectTasks,
+  IconPage := CreateInputOptionPage(wpSelectTasks,
+    'Icône des raccourcis', 'Quel logo afficher sur les raccourcis ?',
+    'Icône utilisée dans le menu Démarrer et sur le Bureau.',
+    True, False);
+  IconPage.Add('Logo Discord');
+  IconPage.Add('Logo Equicord');
+  IconPage.SelectedValueIndex := 0;
+
+  EquicordPage := CreateInputQueryPage(IconPage.ID,
     'Build Equicord (optionnel)', 'Utiliser un build local d''Equicord ?',
     'Laisse vide (recommandé) : la build officielle d''Equicord est téléchargée au premier' + #13#10 +
     'lancement et mise à jour automatiquement.' + #13#10 +

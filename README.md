@@ -112,7 +112,8 @@ Produit `installer\windows\output\equicord-launcher-setup.exe`. Nécessite Inno 
 (`winget install -e --id JRSoftware.InnoSetup`). Le setup pose les trois exécutables + la
 DLL pour l'utilisateur courant (sans droits admin), propose une case par Discord installé
 (Stable, PTB, Canary ; seule Stable cochée) pour
-créer les raccourcis menu Démarrer (+ Bureau en option, icône de la branche), et
+créer les raccourcis menu Démarrer (+ Bureau en option), demande l'icône des raccourcis
+(logo Discord de la branche, par défaut, ou logo Equicord ; relancer le setup pour changer), et
 propose un build local d'Equicord (champ vide = build officielle ; écrit alors
 `%APPDATA%\equicord-launcher\config.toml` sans écraser un fichier existant).
 
@@ -140,6 +141,12 @@ celles des branches non choisies. Détection : `~/.local/share/<Discord>`, PATH,
 | `equicord-shortcuts stable canary` | Branches explicites |
 | `equicord-shortcuts --auto` | Branches détectées, sans question |
 | `equicord-shortcuts --remove` | Retire toutes les entrées |
+| `--icon discord\|equicord` | Logo des raccourcis, combinable avec les commandes ci-dessus (défaut : `discord`, demandé en mode interactif) |
+
+Avec `discord`, l'icône est cherchée dans le même ordre que Discord lui-même :
+`~/.local/share/<Discord>/discord.png` (tar.gz), `discord*.png` du paquet système, puis
+`com.discordapp.<Discord>` du Flatpak. Si rien n'est trouvé, le logo Equicord est utilisé.
+Relancer `equicord-shortcuts` sans `--icon` remet le logo Discord.
 
 Les entrées ont `TryExec` : elles disparaissent du menu si le launcher est désinstallé.
 
@@ -148,6 +155,7 @@ Les entrées ont `TryExec` : elles disparaissent du menu si le launcher est dés
 ```
 chmod +x installer/linux/install.sh installer/linux/uninstall.sh
 installer/linux/install.sh      # pose tout sous ~/.local, puis lance equicord-shortcuts
+                                # (arguments transmis : install.sh --auto --icon equicord)
 installer/linux/uninstall.sh    # retire la version utilisateur
 ```
 
