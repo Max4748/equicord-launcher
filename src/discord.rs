@@ -139,7 +139,9 @@ pub fn find_target(branch: Branch) -> Result<Target, String> {
         return Ok(Target::Executable(usr.to_string_lossy().into_owned()));
     }
 
-    // 3. `command -v <bin>`
+    // 3. `command -v <bin>`, sauf un snap : retenu pour le message d'erreur, mais on
+    // essaie d'abord le Flatpak.
+    let mut snap = None;
     if let Ok(output) = Command::new("sh")
         .arg("-c")
         .arg(format!("command -v {}", branch.linux_bin()))
@@ -147,7 +149,9 @@ pub fn find_target(branch: Branch) -> Result<Target, String> {
     {
         if output.status.success() {
             let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path.is_empty() {
+            if is_snap(&path) {
+                snap = Some(path);
+            } else if !path.is_empty() {
                 return Ok(Target::Executable(path));
             }
         }
@@ -165,8 +169,59 @@ pub fn find_target(branch: Branch) -> Result<Target, String> {
         return Ok(Target::Flatpak(electron_hook::FlatpakID::System(id.to_string())));
     }
 
+    if let Some(path) = snap {
+        return Err(format!(
+            "Discord ({}) est installé en snap ({path}) : non supporté. Le confinement du \
+             snap bloque l'injection (LD_PRELOAD ignoré par snap-confine, /usr/lib et \
+             ~/.local invisibles). Installe le .deb officiel ou le Flatpak \
+             (flatpak install flathub {}), puis relance.",
+            branch.as_str(),
+            branch.flatpak_id()
+        ));
+    }
+
     Err(format!(
         "Installation Discord ({}) introuvable sous Linux (ni dans ~/.local/share, ni /usr/bin, ni Flatpak).",
         branch.as_str()
     ))
+}
+
+/// Discord en snap : `/snap/bin/<bin>` est un lien vers `/usr/bin/snap`.
+#[cfg(target_os = "linux")]
+fn is_snap(path: &str) -> bool {
+    let p = std::path::Path::new(path);
+    // /usr/bin/snap peut lui-même être un lien (vers /usr/lib/snapd/snapd) : on compare
+    // les chemins résolus.
+    p.starts_with("/snap")
+        || matches!(
+            (std::fs::canonicalize(p), std::fs::canonicalize("/usr/bin/snap")),
+            (Ok(a), Ok(b)) if a == b
+        )
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::is_snap;
+
+    #[test]
+    fn detects_snap_paths() {
+        assert!(is_snap("/snap/bin/discord"));
+        assert!(!is_snap("/usr/bin/env"));
+        assert!(!is_snap(""));
+    }
+
+    #[test]
+    fn detects_link_to_snap_binary() {
+        if !std::path::Path::new("/usr/bin/snap").exists() {
+            return; // snapd absent : rien à vérifier
+        }
+        let dir = std::env::temp_dir().join(format!("equicord-snap-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let link = dir.join("discord");
+        let _ = std::fs::remove_file(&link);
+        std::os::unix::fs::symlink("/usr/bin/snap", &link).unwrap();
+        let result = is_snap(link.to_str().unwrap());
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(result);
+    }
 }

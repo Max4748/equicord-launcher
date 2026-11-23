@@ -18,8 +18,21 @@ pub fn main(default_branch: Branch) {
         if !has_console {
             error_box(&e);
         }
+        // Lancé depuis le menu : pas de terminal pour lire stderr.
+        #[cfg(target_os = "linux")]
+        if !std::io::IsTerminal::is_terminal(&std::io::stderr()) {
+            notify_error(&e);
+        }
         std::process::exit(1);
     }
+}
+
+/// Notification bureau (libnotify). Absente : l'erreur reste seulement sur stderr.
+#[cfg(target_os = "linux")]
+fn notify_error(message: &str) {
+    let _ = std::process::Command::new("notify-send")
+        .args(["--app-name=Equicord Launcher", "--icon=dialog-error", "Equicord Launcher", message])
+        .status();
 }
 
 #[cfg(windows)]

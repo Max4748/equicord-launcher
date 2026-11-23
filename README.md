@@ -208,7 +208,10 @@ reste masquée par une entrée Equicord qui ne se lance plus. Rattrapage après 
 ## Plateformes
 
 - **Windows** : supporté (branche principale).
-- **Linux** : supporté (installation classique et Flatpak) — non testé à ce jour.
+- **Linux** : supporté (tar.gz, paquet système, Flatpak ; Flatpak non testé à ce jour). **Discord en snap non supporté** :
+  le confinement bloque l'injection (`LD_PRELOAD` ignoré par `snap-confine`, `/usr/lib` et
+  `~/.local` invisibles). Le launcher refuse alors de démarrer et `equicord-shortcuts` ignore la
+  branche ; installe le `.deb` officiel ou le Flatpak à la place.
 - **macOS** : non supporté (`electron-hook` ne le gère pas encore).
 
 ## Licences

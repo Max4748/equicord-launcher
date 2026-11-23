@@ -29,15 +29,35 @@ dir_name() { case "$1" in stable) echo Discord;; ptb) echo DiscordPTB;; canary) 
 linux_bin() { case "$1" in stable) echo discord;; ptb) echo discord-ptb;; canary) echo discord-canary;; esac; }
 label() { case "$1" in stable) echo "Equicord (Discord)";; ptb) echo "Equicord (Discord PTB)";; canary) echo "Equicord (Discord Canary)";; esac; }
 
+# Discord en snap (/snap/bin/<bin> -> /usr/bin/snap) : non supporté, le confinement
+# bloque l'injection. Même règle que is_snap (src/discord.rs).
+is_snap() {
+  case "$1" in /snap/*) return 0;; esac
+  local snap
+  snap="$(readlink -f /usr/bin/snap 2>/dev/null)" || return 1
+  [ -n "$snap" ] && [ "$(readlink -f "$1" 2>/dev/null)" = "$snap" ]
+}
+
+path_bin() { command -v "$(linux_bin "$1")" 2>/dev/null || true; }
+
+snap_only() { local p; p="$(path_bin "$1")"; [ -n "$p" ] && is_snap "$p" && ! detected "$1"; }
+
 # Même ordre de recherche que src/discord.rs (find_target).
 detected() {
-  local d id
+  local d id p
   d="$(dir_name "$1")"
   id="com.discordapp.$d"
+  p="$(path_bin "$1")"
   [ -f "$HOME/.local/share/$d/$d" ] \
-    || command -v "$(linux_bin "$1")" >/dev/null 2>&1 \
+    || [ -f "/usr/bin/$(linux_bin "$1")" ] \
+    || { [ -n "$p" ] && ! is_snap "$p"; } \
     || [ -d "$HOME/.local/share/flatpak/app/$id" ] \
     || [ -d "/var/lib/flatpak/app/$id" ]
+}
+
+snap_warning() {
+  echo ">> $(label "$1") : Discord est installé en snap, non supporté (injection bloquée)." >&2
+  echo "   Installe le .deb officiel ou le Flatpak (flatpak install flathub com.discordapp.$(dir_name "$1"))." >&2
 }
 
 ours() { [ -f "$1" ] && grep -qx "$MARK" "$1"; }
@@ -107,10 +127,16 @@ case "${1:-}" in
   --remove)
     ;;
   --auto)
-    for b in $BRANCHES; do detected "$b" && selected="$selected $b"; done
+    for b in $BRANCHES; do
+      if detected "$b"; then selected="$selected $b"; elif snap_only "$b"; then snap_warning "$b"; fi
+    done
     ;;
   --refresh)
-    for b in $BRANCHES; do equipped "$b" && selected="$selected $b"; done
+    # Une entrée posée pour un Discord snap (versions ≤ 0.2.3) est retirée.
+    for b in $BRANCHES; do
+      equipped "$b" || continue
+      if snap_only "$b"; then snap_warning "$b"; else selected="$selected $b"; fi
+    done
     [ -n "$icon" ] || icon="$(current_icon)"
     ;;
   "")
@@ -119,7 +145,9 @@ case "${1:-}" in
       exit 1
     fi
     for b in $BRANCHES; do
-      if detected "$b"; then def="O"; hint="[O/n]"; state="détecté"; else def="N"; hint="[o/N]"; state="non détecté"; fi
+      if detected "$b"; then def="O"; hint="[O/n]"; state="détecté"
+      elif snap_only "$b"; then def="N"; hint="[o/N]"; state="snap, non supporté"
+      else def="N"; hint="[o/N]"; state="non détecté"; fi
       read -r -p "Lancer $(label "$b") depuis le menu ($state) ? $hint " ans
       ans="${ans:-$def}"
       case "$ans" in [oOyY]*) selected="$selected $b";; esac
@@ -136,6 +164,7 @@ case "${1:-}" in
   *)
     for b in "$@"; do
       valid_branch "$b" || { echo "Branche inconnue : $b (stable, ptb ou canary)" >&2; exit 1; }
+      snap_only "$b" && snap_warning "$b"
       selected="$selected $b"
     done
     ;;
