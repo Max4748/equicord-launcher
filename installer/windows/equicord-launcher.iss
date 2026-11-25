@@ -3,7 +3,7 @@
 ; Prérequis : les binaires doivent exister dans ..\..\target\release\ (cargo build --release).
 
 #define AppName "Equicord Launcher"
-#define AppVersion "0.2.3"
+#define AppVersion "0.2.4"
 #define RelDir "..\..\target\release"
 
 [Setup]
