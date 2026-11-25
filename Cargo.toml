@@ -37,6 +37,11 @@ toml = "0.8.19"
 # Téléchargement de la build officielle d'Equicord (TLS rustls par défaut).
 ureq = { version = "3", features = ["json"] }
 
+# Copie locale de 0.2.1 corrigée (src/linux/hooks.rs) : sans cela, tout programme lié à
+# la libuv partagée et lancé depuis Discord segfaulte au premier lstat.
+[patch.crates-io]
+electron-hook = { path = "vendor/electron-hook" }
+
 # electron-hook 0.2.1 utilise des modules winapi sans déclarer leurs features.
 # On les active ici : le resolver de cargo unifie les features winapi avec celles
 # d'electron-hook, ce qui corrige sa compilation sous Windows.
